@@ -10,7 +10,7 @@ def get_db_config(db_mode="local"):
             "user": os.getenv("DB_LOCAL_USER"),
             "password": os.getenv("DB_LOCAL_PASS"),
             "database": os.getenv("DB_LOCAL_NAME"),
-            "port":os.getenv("DB_LOCAL_PORT")
+            "port": int(os.getenv("DB_LOCAL_PORT", 3306))
         }
     elif db_mode == "remote":
         return {
@@ -18,7 +18,7 @@ def get_db_config(db_mode="local"):
             "user": os.getenv("DB_REMOTE_USER"),
             "password": os.getenv("DB_REMOTE_PASS"),
             "database": os.getenv("DB_REMOTE_NAME"),
-            "port":os.getenv("DB_REMOTE_PORT")
+            "port": int(os.getenv("DB_REMOTE_PORT", 3306))
         }
     else:
         raise ValueError("Unknown DB mode")

@@ -35,6 +35,14 @@ def fetch_all(sql_query, params=None, db_mode="local"):
 def get_maps(db_mode):
     return fetch_all("select id, title, author_id from maps", None, db_mode)
 
+# renvoie la liste de tous les utilisateurs
+def get_users(db_mode):
+    return fetch_all("select id, pseudo, level, color from users", None, db_mode)
+
+# renvoie la liste de tous les nodes de tous les maps
+def get_all_nodes(db_mode):
+    return fetch_all("select id, map_id, parent_id, text, author_id from nodes", None, db_mode)
+
 
 # renvoie la liste de tous les nodes d'un map (avec le pseudo de l'auteur et sa couleur)
 def get_nodes_for_map(map_id, db_mode):
