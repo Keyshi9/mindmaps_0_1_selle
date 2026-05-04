@@ -61,6 +61,8 @@ def display_mindmap(map_id):
             display_mindmap_tree(right_frame, nodes)
         elif mode == 'forum':
             display_mindmap_forum(right_frame, nodes)
+        elif mode == 'radial':
+            display_mindmap_radial(right_frame, nodes)
     else:
         tk.Label(right_frame, text="Aucun node pour ce mindmap").pack()
 
@@ -164,6 +166,96 @@ def display_mindmap_forum(frame, nodes):
 
     place_forum(root_node, 20, 20, 50) # le root prend 50% de la largeur, les enfants 45%, etc. 
     update_scroll_region()
+
+# Affichage du mindmap en mode radial
+def display_mindmap_radial(frame, nodes):
+    container = tk.Frame(frame)
+    container.pack(fill='both', expand=True)
+
+    canvas = tk.Canvas(container, bg='white')
+    vsb = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+    hsb = ttk.Scrollbar(container, orient="horizontal", command=canvas.xview)
+
+    canvas.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+
+    vsb.pack(side="right", fill="y")
+    hsb.pack(side="bottom", fill="x")
+    canvas.pack(side="left", fill="both", expand=True)
+
+    # Mise à jour de la zone scrollable
+    def update_scroll_region(event=None):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+    canvas.bind("<Configure>", update_scroll_region)
+
+    root_node = next((n for n in nodes if n['parent_id'] is None or n['parent_id'] == 0), None)
+    if not root_node:
+        return
+
+    # Paramètres d'affichage radial
+    center_x = 1000
+    center_y = 1000
+    level_radius_step = 200
+
+    def draw_node(x, y, text, color, node):
+        radius = 40
+        # Dessiner le cercle
+        item = canvas.create_oval(x - radius, y - radius, x + radius, y + radius, fill=color, outline='black', width=2)
+        # Texte (tronqué et centré)
+        text_str = str(text) if text else ""
+        display_text = text_str if len(text_str) <= 20 else text_str[:17] + "..."
+        canvas.create_text(x, y, text=display_text, justify="center", font=("Arial", 10, "bold"), width=70)
+        # Binder le clic droit sur le node pour éditer
+        canvas.tag_bind(item, "<Button-3>", lambda e, n=node: edit_node(e, n))
+        return item
+
+    def place_radial(node, x, y, angle_start, angle_end, level):
+        children = [n for n in nodes if n['parent_id'] == node['id']]
+        if not children:
+            return
+
+        nb_children = len(children)
+        angle_step = (angle_end - angle_start) / nb_children
+
+        for i, child in enumerate(children):
+            # Calculer l'angle pour cet enfant au milieu de sa portion d'angle allouée
+            child_angle = angle_start + i * angle_step + angle_step / 2
+            
+            rad = math.radians(child_angle)
+            
+            # Calcul de la position de l'enfant
+            current_radius = level_radius_step * level
+            child_x = center_x + current_radius * math.cos(rad)
+            child_y = center_y + current_radius * math.sin(rad)
+
+            # Ligne de liaison
+            canvas.create_line(x, y, child_x, child_y, fill='gray', width=2)
+
+            # Dessin de l'enfant
+            color = child.get('color', 'lightblue')
+            if not color:
+                color = 'lightblue'
+            draw_node(child_x, child_y, child['text'], color, child)
+
+            # Récursivité avec la portion d'angle de l'enfant
+            place_radial(child, child_x, child_y, angle_start + i * angle_step, angle_start + (i + 1) * angle_step, level + 1)
+
+    # Dessiner le root
+    color = root_node.get('color', 'lightgreen')
+    if not color:
+        color = 'lightgreen'
+    draw_node(center_x, center_y, root_node['text'], color, root_node)
+
+    # Démarrage récursif pour tous les enfants
+    place_radial(root_node, center_x, center_y, 0, 360, 1)
+
+    # Centrer la vue sur le root_node au premier affichage (optionnel, mais améliore l'UX)
+    def center_view():
+        canvas.xview_moveto((center_x - canvas.winfo_width()/2) / max(1, canvas.bbox("all")[2] if canvas.bbox("all") else 1))
+        canvas.yview_moveto((center_y - canvas.winfo_height()/2) / max(1, canvas.bbox("all")[3] if canvas.bbox("all") else 1))
+    
+    # Exécuter l'ajustement du scroll après le rendu initial
+    canvas.after(50, lambda: [update_scroll_region(), center_view()])
 
 # Cette fonction propose 3 actions sur un node : éditer le texte, supprimer le node ou insérer un nouveau node en dessous
 def edit_node(event, node):
@@ -273,6 +365,7 @@ frm_options.grid(column=0, row=2, pady=10)
 tk.Label(frm_options, text="Mode d'affichage Mindmap:").pack(anchor='w')
 tk.Radiobutton(frm_options, text="Treeview", variable=display_mode, value='tree', command=refresh_mindmap).pack(anchor='w')
 tk.Radiobutton(frm_options, text="Forum", variable=display_mode, value='forum', command=refresh_mindmap).pack(anchor='w')
+tk.Radiobutton(frm_options, text="Radial", variable=display_mode, value='radial', command=refresh_mindmap).pack(anchor='w')
 
 # frame pour l'affichage des résultats dans left_frame
 frm_result = tk.Frame(left_frame, bg="lightgreen")
